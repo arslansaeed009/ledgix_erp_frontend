@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink-900: 15 26 46;
+  --ink-800: 22 35 58;
+  --ink-700: 31 48 73;
+  --surface: 255 255 255;
+  --surface-soft: 246 248 251;
+  --surface-muted: 238 242 247;
+  --surface-border: 227 233 241;
+  --brand-50: 234 242 252;
+  --brand-100: 207 226 248;
+  --accent-green-light: 220 252 231;
+  --accent-red-light: 254 226 226;
+  --accent-amber-light: 254 243 199;
+}
+
+.dark {
+  --ink-900: 248 250 252;
+  --ink-800: 226 232 240;
+  --ink-700: 186 198 214;
+  --surface: 17 24 39;
+  --surface-soft: 24 32 46;
+  --surface-muted: 36 48 66;
+  --surface-border: 55 70 92;
+  --brand-50: 22 35 58;
+  --brand-100: 31 48 73;
+  --accent-green-light: 6 78 59;
+  --accent-red-light: 69 16 16;
+  --accent-amber-light: 69 39 4;
+}
+
+@layer base {
+  html { font-family: 'Inter', sans-serif; }
+  body {
+    @apply bg-surface-soft text-ink-900 antialiased;
+  }
+  h1, h2, h3, h4 { font-family: 'Sora', sans-serif; }
+  ::selection { background-color: #CFE2F8; }
+  *:focus-visible {
+    outline: 2px solid #1565C0;
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .font-mono-num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+  .glass {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  .dark .glass {
+    background: rgba(17, 24, 39, 0.82);
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: #CFE2F8; border-radius: 8px; }
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb { background: #2D3A4F; }
+}
+
+  .dark select option {
+    background-color: rgb(var(--surface));
+    color: rgb(var(--ink-900));
+  }

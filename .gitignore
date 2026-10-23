@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Build / env
+dist/
+build/
+.env
+.env.*
+!.env.example
+!.env.production
+!.env.production.example
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# SQLite runtime / lock files (cause conflicts between machines)
+# These are created while the backend is running (WAL mode).
+*.db-shm
+*.db-wal
+*.db-journal
+backend/data/*.db-shm
+backend/data/*.db-wal
+backend/data/*.db-journal
+
+# Optional: keep the main DB local-only too (uncomment if you don't want to share seed data)
+# backend/data/*.db
+
+# Uploads generated at runtime
+backend/uploads/
+node_modules/
+dist/
