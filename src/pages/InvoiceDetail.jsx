@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Download, MessageCircle, Wallet, XCircle, Pencil, Trash2 } from 'lucide-react';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
+import { ArrowLeft, Download, MessageCircle, Wallet, XCircle, Pencil, Trash2, Printer } from 'lucide-react';
 import api, { apiErrorMessage, openAuthFile } from '../lib/api';
 import { useCompany } from '../lib/CompanyContext';
 import { formatMoney, formatDate, todayISO, buildWhatsAppLink } from '../lib/format';
@@ -12,6 +12,7 @@ const METHODS = ['cash', 'bank', 'cheque', 'jazzcash', 'easypaisa', 'card', 'onl
 export default function InvoiceDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [invoice, setInvoice] = useState(null);
   const [items, setItems] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -97,12 +98,20 @@ export default function InvoiceDetail() {
       ? `Hi ${invoice.customer_name}, please find your ${docLabel} ${invoice.invoice_number} from ${brandLabel} (Total: ${formatMoney(invoice.total)}, Balance: ${formatMoney(invoice.balance)}). I'll attach the PDF now.`
       : `Hi ${invoice.customer_name}, please find your ${docLabel} ${invoice.invoice_number} (Total: ${formatMoney(invoice.total)}, Balance: ${formatMoney(invoice.balance)}). I'll attach the PDF now.`
   ) : null;
+  const discountAmount = invoice.discount_type === 'percent'
+    ? Number(invoice.subtotal) * (Number(invoice.discount_value) || 0) / 100
+    : Number(invoice.discount_value) || 0;
 
   return (
     <div className="space-y-6">
       <button onClick={() => navigate('/invoices')} className="flex items-center gap-1.5 text-sm text-ink-700/60 hover:text-brand-700">
         <ArrowLeft size={15} /> Back to Invoices
       </button>
+      {location.state?.posPaymentError && (
+        <p className="rounded-lg bg-accent-redLight px-3 py-2 text-sm text-accent-red" role="alert">
+          Bill created, but payment could not be recorded: {location.state.posPaymentError}
+        </p>
+      )}
 
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
@@ -117,6 +126,9 @@ export default function InvoiceDetail() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer size={15} /> Thermal Print
+          </Button>
           <Button variant="outline" onClick={handleOpenPdf} disabled={pdfLoading}>
             {pdfLoading ? <Spinner size={15} /> : <Download size={15} />}
             {pdfLoading ? 'Generating…' : 'PDF'}
@@ -215,6 +227,45 @@ export default function InvoiceDetail() {
           </div>
         </form>
       </Modal>
+
+      <section className="thermal-print" aria-label="Thermal invoice receipt">
+        {brandLabel && <h1 className="thermal-center thermal-company">{brandLabel}</h1>}
+        <p className="thermal-center thermal-title">{invoice.doc_type === 'bill' ? 'BILL' : 'INVOICE'}</p>
+        <div className="thermal-meta">
+          <p><strong>No:</strong> {invoice.invoice_number}</p>
+          <p><strong>Date:</strong> {formatDate(invoice.date)}</p>
+          {invoice.due_date && <p><strong>Due:</strong> {formatDate(invoice.due_date)}</p>}
+          <p><strong>Customer:</strong> {invoice.customer_name}</p>
+        </div>
+        <table className="thermal-items">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Qty</th>
+              <th className="thermal-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map(item => (
+              <tr key={item.id}>
+                <td>{item.description}<br /><span>{formatMoney(item.unit_price)} each</span></td>
+                <td>{item.quantity}</td>
+                <td className="thermal-right">{formatMoney(item.line_total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="thermal-totals">
+          <p><span>Subtotal</span><span>{formatMoney(invoice.subtotal)}</span></p>
+          {discountAmount > 0 && <p><span>Discount</span><span>- {formatMoney(discountAmount)}</span></p>}
+          <p><span>Tax</span><span>{formatMoney(invoice.tax_amount)}</span></p>
+          {invoice.shipping_amount > 0 && <p><span>Shipping</span><span>{formatMoney(invoice.shipping_amount)}</span></p>}
+          <p className="thermal-grand-total"><span>Total</span><span>{formatMoney(invoice.total)}</span></p>
+          <p><span>Paid</span><span>{formatMoney(invoice.paid_amount)}</span></p>
+          <p><span>Balance</span><span>{formatMoney(invoice.balance)}</span></p>
+        </div>
+        <p className="thermal-center thermal-thanks">Thank you</p>
+      </section>
     </div>
   );
 }

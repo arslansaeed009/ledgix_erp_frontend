@@ -13,6 +13,7 @@ import { getStoredTheme, applyTheme, subscribeTheme } from '../lib/theme';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/pos', label: 'POS / New Sale', icon: ShoppingCart },
   { to: '/customers', label: 'Customers', icon: Users },
   { to: '/products', label: 'Products', icon: Package },
   { to: '/quotations', label: 'Quotations', icon: FileText },
@@ -215,6 +216,7 @@ function QuickActions() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const actions = [
+    { label: 'POS / New Sale', to: '/pos' },
     { label: 'New Invoice', to: '/invoices/new' },
     { label: 'New Quotation', to: '/quotations/new' },
     { label: 'Receive Payment', to: '/payments?new=1' },

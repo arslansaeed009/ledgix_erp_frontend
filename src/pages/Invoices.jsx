@@ -33,7 +33,10 @@ export default function Invoices() {
           <h1 className="font-display font-bold text-2xl text-ink-900">Invoices</h1>
           <p className="text-sm text-ink-700/60 mt-0.5">{filtered.length} document{filtered.length !== 1 ? 's' : ''}</p>
         </div>
-        <Link to="/invoices/new"><Button><Plus size={16} /> New Invoice</Button></Link>
+        <div className="flex gap-2">
+          <Link to="/pos"><Button variant="outline"><Receipt size={16} /> POS / New Sale</Button></Link>
+          <Link to="/invoices/new"><Button><Plus size={16} /> New Invoice</Button></Link>
+        </div>
       </div>
 
       <Card className="p-4 flex flex-col sm:flex-row gap-3">

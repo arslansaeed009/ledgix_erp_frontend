@@ -27,6 +27,7 @@ import Purchases from './pages/Purchases';
 import SalesReturns from './pages/SalesReturns';
 import Reports from './pages/Reports';
 import SearchResults from './pages/SearchResults';
+import Pos from './pages/Pos';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -59,6 +60,7 @@ export default function App() {
 
             <Route path="/" element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
               <Route path="dashboard" element={<Dashboard />} />
+              <Route path="pos" element={<Pos />} />
 
               <Route path="customers" element={<Customers />} />
               <Route path="customers/:id" element={<CustomerDetail />} />
