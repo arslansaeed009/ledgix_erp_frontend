@@ -1,68 +1,85 @@
-# MACHINE HOME — ERP & Ledger Management System
+# Ledgix ERP Frontend
 
-A complete, local-first business management system for MACHINE HOME (industrial compressors, service station lifts, and related equipment).
+The React web application for Ledgix ERP. It provides the user interface for company workspaces, sales, inventory, purchasing, payments, and reporting. Business data and authentication are provided by the separately deployed Ledgix ERP API.
 
-**Status: All 6 phases complete.** Customers, Products & Inventory, Quotations, Invoices, Payments, Ledger, Expenses, Suppliers & Purchases, Reports, Global Search, PDF generation, and WhatsApp sharing are all built and functionally tested end-to-end.
+## Features
 
-## Stack
-- **Backend:** Node.js, Express, SQLite (better-sqlite3) — a single local database file, no server installation needed
-- **Frontend:** React, Vite, Tailwind CSS, Recharts, Lucide icons
-- **Auth:** JWT + bcrypt, single Admin account created via a one-time setup wizard
-- **PDF:** Puppeteer — generates branded invoice/quotation/receipt/ledger-statement PDFs with your logo, stamp, and signature
+- Company signup, login, workspace branding, and dark mode
+- Customer and supplier records, balances, and ledgers
+- Products, categories, inventory movements, and low-stock alerts
+- Quotations, invoices, payments, and sales returns
+- Purchase invoices and supplier payments
+- Dashboard, global search, and business reports
+- PDF documents and selected Excel exports
+- WhatsApp share links in supported screens; invoice details do not include a WhatsApp action
 
-## First-time setup
+Some capabilities have limitations; see [FEATURE_STATUS.md](./FEATURE_STATUS.md) for what is ready, partial, or planned.
 
-### 1. Backend
+## Technology
+
+- React 19 and React Router
+- Vite
+- Tailwind CSS
+- Axios
+- Recharts and Lucide icons
+
+## Requirements
+
+- Node.js and npm
+- The Ledgix ERP backend/API, available either locally or at a deployed URL
+
+## Local development
+
+From the repository root:
+
 ```bash
-cd backend
-npm install
-npm start
-```
-This creates `backend/data/machinehome.db` automatically (empty — no demo data) and starts the API on `http://localhost:4000`.
-The first `npm install` also downloads a bundled Chromium for Puppeteer (needed for PDF generation) — this requires an internet connection and may take a minute or two the first time only.
-
-### 2. Frontend
-In a second terminal:
-```bash
-cd frontend
 npm install
 npm run dev
 ```
-Open `http://localhost:5173` in your browser.
 
-### 3. Create your Admin account
-The first time you open the app, you'll see a one-time **Setup** screen. Enter your name, email, and password — this becomes your only login.
+By default, the frontend sends API requests to `http://localhost:4000/api`. To use another API, create a `.env` file in the repository root and set:
 
-## What's included
-
-- **Customers (CRM):** full profile, credit limit, opening balance, documents, complete history
-- **Products & Inventory:** categories, images, warehouses, stock in/out/adjustment/transfer, low-stock alerts, full audit trail
-- **Quotations:** line items, discounts, tax, PDF, WhatsApp share, duplicate, convert to invoice
-- **Invoices:** direct or from quotation, automatic stock deduction, ledger posting, PDF, WhatsApp share, cancellation with stock/ledger reversal
-- **Payments:** against an invoice or as a general advance, multiple methods, auto invoice-status updates (pending → partial → paid)
-- **Ledger:** automatic running balance per customer, company-wide overview, filtered statements, PDF export
-- **Expenses:** categorized tracking (fuel, salary, rent, etc.)
-- **Suppliers & Purchases:** supplier CRM, purchase invoices with automatic stock-in, supplier ledger, supplier payments
-- **Reports:** sales, customers, profit & loss, expenses, stock valuation, purchases, tax/GST, outstanding balances, best-selling products — with Excel export
-- **Global Search:** across customers, products, invoices, quotations, payments, and suppliers
-- **Dashboard:** live KPIs, charts, low-stock alerts, notifications bell
-
-## Notes on integrations
-- **WhatsApp:** Uses `wa.me` deep links (opens WhatsApp Web/App with a pre-filled message). WhatsApp does not allow any web app to auto-attach a file through this method — after downloading a PDF, attach it manually in the chat that opens. Real automatic delivery requires Meta's official WhatsApp Business API, which needs business verification (1–4 weeks). Let me know if you'd like that wired in later.
-- **Email:** Not connected — "Forgot password" shows the reset token directly on-screen since no SMTP account is configured. Give me an SMTP login (Gmail app password or company mail) whenever you want real email sending.
-- **Backups:** The entire system is one file — `backend/data/machinehome.db`. Copy that file anywhere to back up or move your data. Uploaded images/documents live in `backend/uploads/`.
-- **Purchase Orders:** The backend supports draft purchase orders (before the supplier bills you), but only the Purchase Invoice flow (the actual bill) has a frontend screen right now, since that's what most small operations need day-to-day. Ask if you'd like a dedicated PO screen too.
-
-## Project structure
+```env
+VITE_API_URL=http://localhost:4000/api
+VITE_APP_URL=http://localhost:5173
 ```
-backend/src/
-  db/        → schema.sql (all tables), migrate.js, index.js
-  routes/    → one file per module (customers, products, quotations, invoices, payments, ledger, expenses, suppliers, purchases, reports, search, pdf, notifications, settings, auth)
-  middleware/→ JWT auth guard
-  utils/     → document numbering, ledger posting, line-item calculations, PDF HTML templates
-frontend/src/
-  pages/     → one screen per module
-  layouts/   → AppShell (sidebar + topbar + notifications)
-  components/→ shared UI primitives + LineItemsEditor (shared by quotations/invoices/purchases)
-  lib/       → API client, auth context, formatting helpers
+
+Open the local URL printed by Vite (normally `http://localhost:5173`). Sign up or log in using an account served by the backend.
+
+## Environment variables
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `VITE_API_URL` | Backend API base URL; include `/api` | `http://localhost:4000/api` |
+| `VITE_APP_URL` | Public frontend URL | Current browser origin |
+
+These are frontend build-time variables and must use the `VITE_` prefix. Do not put backend secrets in frontend environment variables; values prefixed with `VITE_` are included in the browser build.
+
+For the currently deployed environment, see [ENV_SETUP.md](./ENV_SETUP.md). Update host environment variables and redeploy after changing frontend `VITE_*` values.
+
+## Available scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Create the production frontend build in `dist/` |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Run Oxlint |
+
+## Deployment
+
+The frontend is deployed on Netlify at [ledgixerp.netlify.app](https://ledgixerp.netlify.app), and uses the API hosted on Railway. Production API and app URLs are configured in [netlify.toml](./netlify.toml) and [ENV_SETUP.md](./ENV_SETUP.md). Ensure the backend allows the deployed frontend origin.
+
+## Project layout
+
+```text
+src/
+  components/   Shared UI components
+  hooks/        Reusable React hooks
+  layouts/      Authenticated application shell
+  lib/          API client, auth/company context, config, and utilities
+  pages/        Application screens and workflows
+public/         Static public assets
 ```
+
+The backend and database are not part of this frontend repository. Backend setup, database backups, and server-side configuration must be handled in the backend deployment.

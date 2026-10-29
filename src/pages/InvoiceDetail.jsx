@@ -24,7 +24,7 @@ export default function InvoiceDetail() {
   const [pdfLoading, setPdfLoading] = useState(false);
 
   const [customerBalance, setCustomerBalance] = useState(null);
-  const { brandLabel } = useCompany();
+  const { brandLabel, settings } = useCompany();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -55,7 +55,10 @@ export default function InvoiceDetail() {
   }
 
   async function handleCancel() {
-    if (!confirm('Cancel this invoice? Stock will be restored and the ledger adjusted.')) return;
+    const message = invoice.doc_type === 'bill'
+      ? 'Cancel this bill? Stock will be restored and the bill amount reversed in the ledger. Any recorded payments will remain on the customer account; no refund will be issued.'
+      : 'Cancel this invoice? Stock will be restored and the ledger adjusted.';
+    if (!confirm(message)) return;
     try {
       await api.put(`/invoices/${id}/cancel`);
       load();
@@ -66,9 +69,12 @@ export default function InvoiceDetail() {
 
   async function handleDelete() {
     const label = invoice.doc_type === 'bill' ? 'bill' : 'invoice';
+    const billPaymentNote = invoice.doc_type === 'bill'
+      ? ' Any recorded payments will remain as unallocated customer payments; no refund will be issued.'
+      : '';
     const msg = invoice.status === 'cancelled'
-      ? `Permanently delete ${label} ${invoice.invoice_number}? This cannot be undone.`
-      : `Permanently delete ${label} ${invoice.invoice_number}? Stock will be restored, the ledger adjusted, and this cannot be undone.`;
+      ? `Permanently delete ${label} ${invoice.invoice_number}? This cannot be undone.${billPaymentNote}`
+      : `Permanently delete ${label} ${invoice.invoice_number}? Stock will be restored, the ledger adjusted, and this cannot be undone.${billPaymentNote}`;
     if (!confirm(msg)) return;
     try {
       await api.delete(`/invoices/${id}`);
@@ -92,8 +98,8 @@ export default function InvoiceDetail() {
   if (loading || !invoice) return <div className="flex items-center justify-center h-96 text-brand-700"><Spinner size={28} /></div>;
 
   const docLabel = invoice.doc_type === 'bill' ? 'bill' : 'invoice';
-  const waLink = invoice.customer_whatsapp ? buildWhatsAppLink(
-    invoice.customer_whatsapp,
+  const waLink = settings.company_phone ? buildWhatsAppLink(
+    settings.company_phone,
     brandLabel
       ? `Hi ${invoice.customer_name}, please find your ${docLabel} ${invoice.invoice_number} from ${brandLabel} (Total: ${formatMoney(invoice.total)}, Balance: ${formatMoney(invoice.balance)}). I'll attach the PDF now.`
       : `Hi ${invoice.customer_name}, please find your ${docLabel} ${invoice.invoice_number} (Total: ${formatMoney(invoice.total)}, Balance: ${formatMoney(invoice.balance)}). I'll attach the PDF now.`
@@ -101,6 +107,9 @@ export default function InvoiceDetail() {
   const discountAmount = invoice.discount_type === 'percent'
     ? Number(invoice.subtotal) * (Number(invoice.discount_value) || 0) / 100
     : Number(invoice.discount_value) || 0;
+  const hasNoPayments = Number(invoice.paid_amount) === 0;
+  const isBill = invoice.doc_type === 'bill';
+  const canRecordPayment = invoice.status !== 'cancelled' && Number(invoice.balance) > 0;
 
   return (
     <div className="space-y-6">
@@ -134,17 +143,17 @@ export default function InvoiceDetail() {
             {pdfLoading ? 'Generating…' : 'PDF'}
           </Button>
           {waLink && <a href={waLink} target="_blank" rel="noreferrer"><Button variant="secondary"><MessageCircle size={15} /> WhatsApp</Button></a>}
-          {invoice.status !== 'cancelled' && invoice.paid_amount === 0 && (
-            <Link to={`/invoices/${id}/edit`}><Button variant="outline"><Pencil size={15} /> Edit</Button></Link>
+          {invoice.status !== 'cancelled' && hasNoPayments && (
+            <Link to={`/invoices/${id}/edit`}><Button variant="outline"><Pencil size={15} /> {isBill ? 'Edit Bill' : 'Edit'}</Button></Link>
           )}
-          {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
+          {canRecordPayment && (
             <Button onClick={() => setPayOpen(true)}><Wallet size={15} /> Record Payment</Button>
           )}
-          {invoice.status !== 'cancelled' && invoice.paid_amount === 0 && (
-            <Button variant="danger" onClick={handleCancel}><XCircle size={15} /> Cancel Invoice</Button>
+          {invoice.status !== 'cancelled' && hasNoPayments && (
+            <Button variant="danger" onClick={handleCancel}><XCircle size={15} /> {isBill ? 'Cancel Bill' : 'Cancel Invoice'}</Button>
           )}
-          {Number(invoice.paid_amount) === 0 && (
-            <Button variant="danger" onClick={handleDelete}><Trash2 size={15} /> Delete Invoice</Button>
+          {hasNoPayments && (
+            <Button variant="danger" onClick={handleDelete}><Trash2 size={15} /> {isBill ? 'Delete Bill' : 'Delete Invoice'}</Button>
           )}
         </div>
       </div>
