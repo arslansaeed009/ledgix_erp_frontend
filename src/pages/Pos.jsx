@@ -360,7 +360,7 @@ export default function Pos() {
               {!products.length && <Link to="/products/new" className="text-sm text-brand-700 hover:underline">Add a product</Link>}
             </Card>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="pos-product-grid">
               {filteredProducts.map(product => {
                 const image = product.images?.find(item => item.is_primary) || product.images?.[0];
                 const inStock = Number(product.stock_qty) > 0;
