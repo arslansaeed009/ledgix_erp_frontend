@@ -339,7 +339,7 @@ export default function Pos() {
                   >
                     <span className="pos-product-image">
                       {image
-                        ? <img src={`${API_ORIGIN}${image.file_path}`} alt="" loading="lazy" />
+                        ? <img src={`${API_ORIGIN}${image.file_path}`} alt={product.name} loading="lazy" />
                         : <Package size={34} className="text-ink-700/20" />}
                       {!inStock && <span className="pos-stock-badge">Out of stock</span>}
                     </span>
