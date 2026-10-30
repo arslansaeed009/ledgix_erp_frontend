@@ -9,7 +9,7 @@ import { API_ORIGIN } from '../lib/config';
 import { formatMoney, todayISO } from '../lib/format';
 import { useCompany } from '../lib/CompanyContext';
 import { useCategories } from '../hooks/useCategories';
-import { Button, Card, Modal, Spinner } from '../components/ui';
+import { Button, Card, Input, Modal, Spinner } from '../components/ui';
 
 const METHODS = ['cash', 'bank', 'cheque', 'jazzcash', 'easypaisa', 'card', 'online'];
 
@@ -30,12 +30,17 @@ export default function Pos() {
   const [heldSales, setHeldSales] = useState([]);
   const [customerOpen, setCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
+  const [showWalkInForm, setShowWalkInForm] = useState(false);
+  const [walkInCustomer, setWalkInCustomer] = useState({ name: '', city: '', phone: '' });
+  const [walkInError, setWalkInError] = useState('');
+  const [walkInSaving, setWalkInSaving] = useState(false);
   const [heldOpen, setHeldOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ amount: '', method: 'cash', reference_no: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const searchRef = useRef(null);
+  const walkInSubmission = useRef(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -74,6 +79,37 @@ export default function Pos() {
     return customers.filter(item => !query || [item.name, item.company, item.phone]
       .some(value => String(value || '').toLowerCase().includes(query)));
   }, [customers, customerSearch]);
+
+  async function createWalkInCustomer() {
+    if (walkInSubmission.current) return;
+    setWalkInError('');
+    if (!walkInCustomer.name.trim() || !walkInCustomer.city.trim() || !walkInCustomer.phone.trim()) {
+      setWalkInError('Enter the customer name, city, and phone number.');
+      return;
+    }
+
+    walkInSubmission.current = true;
+    setWalkInSaving(true);
+    try {
+      const { data } = await api.post('/customers', {
+        ...walkInCustomer,
+        customer_type: 'Retail',
+        walk_in: true
+      });
+      const newCustomer = data.customer;
+      setCustomers(current => [...current, newCustomer].sort((a, b) => a.name.localeCompare(b.name)));
+      setCustomerId(String(newCustomer.id));
+      setWalkInCustomer({ name: '', city: '', phone: '' });
+      setShowWalkInForm(false);
+      setCustomerSearch('');
+      setCustomerOpen(false);
+    } catch (err) {
+      setWalkInError(apiErrorMessage(err, 'Could not save walk-in customer.'));
+    } finally {
+      walkInSubmission.current = false;
+      setWalkInSaving(false);
+    }
+  }
 
   const totals = useMemo(() => {
     let grossSubtotal = 0;
@@ -324,7 +360,7 @@ export default function Pos() {
               {!products.length && <Link to="/products/new" className="text-sm text-brand-700 hover:underline">Add a product</Link>}
             </Card>
           ) : (
-            <div className="pos-product-grid">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredProducts.map(product => {
                 const image = product.images?.find(item => item.is_primary) || product.images?.[0];
                 const inStock = Number(product.stock_qty) > 0;
@@ -332,22 +368,25 @@ export default function Pos() {
                   <button
                     type="button"
                     key={product.id}
-                    className="pos-product-card"
+                    className="pos-product-card overflow-hidden rounded-2xl border border-surface-border bg-surface p-0 text-left shadow-card hover:shadow-cardHover transition-shadow cursor-pointer"
                     disabled={!inStock}
                     onClick={() => addProduct(product)}
                     title={inStock ? `Add ${product.name} to cart` : 'Out of stock'}
                   >
-                    <span className="pos-product-image">
+                    <span className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-surface-soft">
                       {image
-                        ? <img src={`${API_ORIGIN}${image.file_path}`} alt={product.name} loading="lazy" />
-                        : <Package size={34} className="text-ink-700/20" />}
+                        ? <img src={`${API_ORIGIN}${image.file_path}`} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
+                        : <Package size={32} className="text-ink-700/20" />}
                       {!inStock && <span className="pos-stock-badge">Out of stock</span>}
                     </span>
-                    <span className="pos-product-name">{product.name}</span>
-                    <span className="pos-product-sub">{product.brand || product.category_name || product.sku || ' '}</span>
-                    <span className="pos-product-footer">
-                      <strong>{formatMoney(product.sale_price, currency)}</strong>
-                      <span>{product.stock_qty} pcs</span>
+                    <span className="flex flex-col p-4">
+                      {product.category_name && <span className="mb-0.5 text-[11px] font-medium text-brand-700">{product.category_name}</span>}
+                      <span className="truncate text-sm font-medium text-ink-900">{product.name}</span>
+                      {product.brand && <span className="text-xs text-ink-700/50">{product.brand}</span>}
+                      <span className="mt-3 flex items-center justify-between">
+                        <strong className="font-mono-num text-ink-900">{formatMoney(product.sale_price, currency)}</strong>
+                        <span className="text-xs text-ink-700/50">{product.stock_qty} in stock</span>
+                      </span>
                     </span>
                   </button>
                 );
@@ -360,7 +399,22 @@ export default function Pos() {
           <Card className="pos-checkout">
             <div className="pos-customer-head">
               <div className="min-w-0">
-                <h2 className="text-sm font-semibold text-ink-900 truncate">{customer?.name || 'Walk-in Customer'}</h2>
+                {customer ? (
+                  <h2 className="text-sm font-semibold text-ink-900 truncate">{customer.name}</h2>
+                ) : (
+                  <button
+                    type="button"
+                    className="pos-small-button"
+                    onClick={() => {
+                      setCustomerSearch('');
+                      setWalkInError('');
+                      setShowWalkInForm(true);
+                      setCustomerOpen(true);
+                    }}
+                  >
+                    <CircleUserRound size={14} /> Walk-In Customer
+                  </button>
+                )}
                 <p className="text-xs text-ink-700/55">{customer ? customer.phone || 'Selected customer' : 'Choose a customer for this bill'}</p>
               </div>
               <button type="button" className="pos-small-button" onClick={() => { setCustomerSearch(''); setCustomerOpen(true); }}>
@@ -447,12 +501,46 @@ export default function Pos() {
       <Modal open={customerOpen} onClose={() => setCustomerOpen(false)} title="Select Customer">
         <div className="space-y-3">
           <label className="pos-modal-search"><Search size={16} /><input autoFocus value={customerSearch} onChange={event => setCustomerSearch(event.target.value)} placeholder="Search name or phone" /></label>
+          {customer && (
+            <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">
+              Selected customer: <strong>{customer.name}</strong>
+            </p>
+          )}
+          <button
+            type="button"
+            className={`pos-customer-option rounded-lg border px-3 ${showWalkInForm ? 'pos-customer-selected border-brand-700' : 'border-surface-border'}`}
+            onClick={() => { setShowWalkInForm(open => !open); setWalkInError(''); }}
+          >
+            <span className="pos-customer-avatar"><UserRound size={18} /></span>
+            <span className="min-w-0 flex-1 text-left">
+              <strong className="block truncate">{showWalkInForm ? 'Cancel Walk-In Customer' : 'Walk-In Customer'}</strong>
+              <small>Create and select a customer for this sale</small>
+            </span>
+          </button>
+          {showWalkInForm && (
+            <div className="space-y-3 rounded-xl border border-surface-border bg-surface-soft/50 p-4">
+              <h4 className="text-sm font-semibold text-ink-900">Walk-In Customer Details</h4>
+              <Input label="Customer Name" value={walkInCustomer.name}
+                onChange={event => setWalkInCustomer(customer => ({ ...customer, name: event.target.value }))} />
+              <Input label="City" value={walkInCustomer.city}
+                onChange={event => setWalkInCustomer(customer => ({ ...customer, city: event.target.value }))} />
+              <Input label="Phone Number" type="tel" value={walkInCustomer.phone}
+                onChange={event => setWalkInCustomer(customer => ({ ...customer, phone: event.target.value }))} />
+              {walkInError && <p className="text-sm text-accent-red" role="alert">{walkInError}</p>}
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" disabled={walkInSaving} onClick={() => setShowWalkInForm(false)}>Cancel</Button>
+                <Button type="button" disabled={walkInSaving} onClick={createWalkInCustomer}>
+                  {walkInSaving ? 'Saving Customer…' : 'Save & Select Customer'}
+                </Button>
+              </div>
+            </div>
+          )}
           <div className="pos-customer-results">
             {filteredCustomers.map(item => (
               <button type="button" key={item.id} className={`pos-customer-option ${String(item.id) === String(customerId) ? 'pos-customer-selected' : ''}`}
                 onClick={() => { setCustomerId(String(item.id)); setCustomerOpen(false); }}>
                 <span className="pos-customer-avatar"><CircleUserRound size={18} /></span>
-                <span className="min-w-0 flex-1 text-left"><strong className="block truncate">{item.name}</strong><small>{item.phone || item.customer_type || 'Customer'}</small></span>
+                <span className="min-w-0 flex-1 text-left"><strong className="block truncate">{item.name}</strong><small>{item.phone || item.city || item.customer_type || 'Customer'}</small></span>
                 {String(item.id) === String(customerId) && <Check size={17} />}
               </button>
             ))}
